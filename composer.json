@@ -1,0 +1,77 @@
+{
+    "name": "enadstack/laravel-action-logger",
+    "description": "A powerful, flexible Action Logger / Audit Log package for Laravel with multi-tenancy support and optional Vue UI",
+    "version": "1.0.0",
+    "type": "library",
+    "license": "MIT",
+    "homepage": "https://github.com/enadstack/laravel-action-logger",
+    "keywords": [
+        "laravel",
+        "audit",
+        "audit-log",
+        "action-logger",
+        "activity-log",
+        "multi-tenant",
+        "logging",
+        "tracking",
+        "history",
+        "enadstack"
+    ],
+    "authors": [
+        {
+            "name": "Enad Abu Zaid",
+            "email": "enad@enadstack.com",
+            "homepage": "https://enadstack.com",
+            "role": "Developer"
+        }
+    ],
+    "support": {
+        "issues": "https://github.com/enadstack/laravel-action-logger/issues",
+        "source": "https://github.com/enadstack/laravel-action-logger"
+    },
+    "require": {
+        "php": "^8.2",
+        "illuminate/contracts": "^11.0|^12.0",
+        "illuminate/database": "^11.0|^12.0",
+        "illuminate/support": "^11.0|^12.0",
+        "illuminate/http": "^11.0|^12.0"
+    },
+    "require-dev": {
+        "orchestra/testbench": "^9.0",
+        "phpunit/phpunit": "^11.0",
+        "laravel/pint": "^1.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Enadstack\\ActionLogger\\": "src/"
+        },
+        "files": [
+            "src/helpers.php"
+        ]
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Enadstack\\ActionLogger\\Tests\\": "tests/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Enadstack\\ActionLogger\\ActionLoggerServiceProvider"
+            ],
+            "aliases": {
+                "ActionLogger": "Enadstack\\ActionLogger\\Facades\\ActionLogger"
+            }
+        }
+    },
+    "scripts": {
+        "test": "vendor/bin/phpunit",
+        "format": "vendor/bin/pint",
+        "analyse": "vendor/bin/phpstan analyse"
+    },
+    "config": {
+        "sort-packages": true
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}
