@@ -1,7 +1,7 @@
 {
     "name": "enadstack/laravel-action-logger",
     "description": "A powerful, flexible Action Logger / Audit Log package for Laravel with multi-tenancy support and optional Vue UI",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "type": "library",
     "license": "MIT",
     "homepage": "https://github.com/enadstack/laravel-action-logger",
