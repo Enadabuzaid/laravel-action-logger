@@ -252,5 +252,5 @@ $logger->reset(); // Clear all builder state
 
 ## See Also
 
-- [Full Examples](../src/Examples/ExampleUsage.php)
-- [Custom Tenant Resolvers](../src/Examples/ExampleCustomTenantResolver.php)
+- [Full Examples](../examples/ExampleUsage.php)
+- [Custom Tenant Resolvers](../examples/ExampleCustomTenantResolver.php)

@@ -379,5 +379,5 @@ $tenantLogs = ActionLog::forTenant(auth()->user()->tenant_id)
 ## See Also
 
 - [Service Usage](./USAGE.md)
-- [Examples](../src/Examples/ExampleHasActionLogs.php)
-- [Multi-Tenancy](../src/Examples/ExampleCustomTenantResolver.php)
+- [Examples](../examples/ExampleHasActionLogs.php)
+- [Multi-Tenancy](../examples/ExampleCustomTenantResolver.php)

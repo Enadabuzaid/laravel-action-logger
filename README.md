@@ -367,7 +367,7 @@ vendor/bin/phpunit --coverage-html coverage
 
 ## 💡 Examples
 
-Check out the example files in `src/Examples/`:
+Check out the example files in `examples/`:
 
 - `ExampleUsage.php` - Service and facade usage examples
 - `ExampleHasActionLogs.php` - Trait usage and customization

@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.2] - 2026-07-15
+
+### Changed
+- Moved example files out of the `src/` autoload root into a plain, non-autoloaded `examples/` directory, and updated all doc references (`README.md`, `docs/TRAIT.md`, `docs/USAGE.md`) accordingly.
+
+### Fixed
+- Removed the now-dead `autoload.exclude-from-classmap` entry in `composer.json` left over from the examples move.
+- Removed the redundant `version` key from `composer.json` (Packagist derives this from git tags).
+
+### Added
+- `inertiajs/inertia-laravel` listed under `suggest` in `composer.json`, since the optional bundled UI controller/routes depend on it.
+
 ## [1.0.0] - 2024-12-24
 
 ### Added

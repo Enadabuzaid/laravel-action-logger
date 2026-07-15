@@ -1,7 +1,6 @@
 {
     "name": "enadstack/laravel-action-logger",
     "description": "A powerful, flexible Action Logger / Audit Log package for Laravel with multi-tenancy support and optional Vue UI",
-    "version": "1.0.1",
     "type": "library",
     "license": "MIT",
     "homepage": "https://github.com/enadstack/laravel-action-logger",
@@ -41,15 +40,15 @@
         "phpunit/phpunit": "^11.0",
         "laravel/pint": "^1.0"
     },
+    "suggest": {
+        "inertiajs/inertia-laravel": "Required only if you enable the bundled action-logger UI (config('action-logger.ui.enabled'))."
+    },
     "autoload": {
         "psr-4": {
             "Enadstack\\ActionLogger\\": "src/"
         },
         "files": [
             "src/helpers.php"
-        ],
-        "exclude-from-classmap": [
-            "src/Examples/"
         ]
     },
     "autoload-dev": {
