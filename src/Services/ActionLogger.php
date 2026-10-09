@@ -336,12 +336,14 @@ class ActionLogger
     }
 
     /**
-     * Resolve the request id: explicit value, X-Request-ID header, or a uuid
-     * generated once per request. Null when no request is bound.
+     * Resolve the request id: a valid explicit value, a valid X-Request-ID
+     * header, or a uuid generated once per HTTP request. Null when no request
+     * is bound, or in console/queue contexts without a valid header.
+     * Values must match /^[A-Za-z0-9._\-:]{1,64}$/; invalid ones are ignored.
      */
     protected function resolveRequestId(?string $explicit): ?string
     {
-        if ($explicit !== null) {
+        if ($this->isValidRequestId($explicit)) {
             return $explicit;
         }
 
@@ -352,8 +354,12 @@ class ActionLogger
         $request = app('request');
         $header = $request->headers->get('X-Request-ID');
 
-        if (is_string($header) && $header !== '') {
+        if ($this->isValidRequestId($header)) {
             return $header;
+        }
+
+        if (!$this->shouldGenerateRequestId()) {
+            return null;
         }
 
         $id = $request->attributes->get('action_logger.request_id');
@@ -364,6 +370,20 @@ class ActionLogger
         }
 
         return $id;
+    }
+
+    /**
+     * Whether a request id may be generated (real HTTP requests only; a
+     * long-lived console/queue worker must not tag every log with one id).
+     */
+    protected function shouldGenerateRequestId(): bool
+    {
+        return !app()->runningInConsole();
+    }
+
+    protected function isValidRequestId(mixed $value): bool
+    {
+        return is_string($value) && preg_match('/^[A-Za-z0-9._\-:]{1,64}$/D', $value) === 1;
     }
 
     /**

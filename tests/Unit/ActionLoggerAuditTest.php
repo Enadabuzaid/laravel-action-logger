@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace Enadstack\ActionLogger\Tests\Unit;
 
+use Enadstack\ActionLogger\Contracts\TenantResolverInterface;
 use Enadstack\ActionLogger\Facades\ActionLogger;
 use Enadstack\ActionLogger\Models\ActionLog;
+use Enadstack\ActionLogger\Services\ActionLogger as ActionLoggerService;
 use Enadstack\ActionLogger\Tests\Support\Models\TestModel;
 use Enadstack\ActionLogger\Tests\Support\Models\User;
 use Enadstack\ActionLogger\Tests\TestCase;
@@ -59,6 +61,78 @@ class ActionLoggerAuditTest extends TestCase
         $this->assertSame('System permissions.synced n/a', $log->getDescription());
     }
 
+    /**
+     * Rebind the service so it behaves as in a real HTTP request (Testbench runs in console).
+     */
+    private function simulateHttp(): void
+    {
+        $this->app->singleton(ActionLoggerService::class, fn ($app) => new class($app->make(TenantResolverInterface::class)) extends ActionLoggerService
+        {
+            protected function shouldGenerateRequestId(): bool
+            {
+                return true;
+            }
+        });
+        ActionLogger::clearResolvedInstance(ActionLoggerService::class);
+    }
+
+    private function logWithHeader(string $header): ?string
+    {
+        $subject = TestModel::create(['name' => 'S', 'status' => 'active']);
+        ActionLog::query()->delete();
+        $this->app->instance('request', Request::create('/x', 'GET', server: ['HTTP_X_REQUEST_ID' => $header]));
+        ActionLogger::log($subject, null, 'a.b');
+
+        return ActionLog::first()->request_id;
+    }
+
+    /** @test */
+    public function a_valid_64_char_header_is_accepted(): void
+    {
+        $id = str_repeat('a', 64);
+        $this->assertSame($id, $this->logWithHeader($id));
+    }
+
+    /** @test */
+    public function invalid_headers_are_ignored_and_never_break_the_insert(): void
+    {
+        $this->simulateHttp();
+
+        foreach ([str_repeat('a', 200), 'has space', "line\nbreak", 'ünïcode'] as $bad) {
+            $stored = $this->logWithHeader($bad);
+            $this->assertNotNull($stored);
+            $this->assertNotSame($bad, $stored);
+            $this->assertMatchesRegularExpression('/^[A-Za-z0-9._\-:]{1,64}$/', $stored);
+        }
+    }
+
+    /** @test */
+    public function an_invalid_explicit_request_id_is_ignored(): void
+    {
+        $this->simulateHttp();
+        $subject = TestModel::create(['name' => 'S', 'status' => 'active']);
+        ActionLog::query()->delete();
+        $this->app->instance('request', Request::create('/y'));
+
+        ActionLogger::log($subject, null, 'a.b', requestId: str_repeat('z', 200));
+
+        $stored = ActionLog::first()->request_id;
+        $this->assertNotNull($stored);
+        $this->assertLessThanOrEqual(64, strlen($stored));
+    }
+
+    /** @test */
+    public function console_without_a_header_stores_no_generated_request_id(): void
+    {
+        $subject = TestModel::create(['name' => 'S', 'status' => 'active']);
+        ActionLog::query()->delete();
+        $this->app->instance('request', Request::create('/y'));
+
+        ActionLogger::log($subject, null, 'a.b');
+
+        $this->assertNull(ActionLog::first()->request_id);
+    }
+
     /** @test */
     public function it_uses_the_request_id_header_or_one_stable_generated_id_per_request(): void
     {
@@ -70,6 +144,7 @@ class ActionLoggerAuditTest extends TestCase
         $this->assertSame('req-123', ActionLog::first()->request_id);
 
         ActionLog::query()->delete();
+        $this->simulateHttp();
         $this->app->instance('request', Request::create('/y'));
         ActionLogger::log($subject, null, 'a.b');
         ActionLogger::log($subject, null, 'a.c');

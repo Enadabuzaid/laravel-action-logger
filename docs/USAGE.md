@@ -129,9 +129,9 @@ ActionLogger::for($subject)->event('users.suspended')->module('users')->severity
 ActionLogger::log(null, null, 'permissions.synced', module: 'permissions'); // subject-less event
 ```
 
-- `request_id` is taken from the `X-Request-ID` header, otherwise a uuid generated once per request (null outside a request). Pass `requestId:` to override.
+- `request_id` is a valid `X-Request-ID` header (`[A-Za-z0-9._\-:]`, 1-64 chars; invalid values are ignored), otherwise a uuid generated once per HTTP request. In console/queue/scheduler contexts without a valid header it stays null. A valid `requestId:` argument overrides; an invalid one is ignored.
 - Scopes: `ActionLog::forModule('roles')`, `::severity('warning')`, `::forRequest($id)`.
-- Immutability: set `ACTION_LOGGER_IMMUTABLE=true` to make model `update()`/`delete()` throw `ImmutableLogException`. Bulk query-builder deletes (including `action-logger:prune`) bypass model events and still work.
+- Immutability: set `ACTION_LOGGER_IMMUTABLE=true` to make model `update()`/`delete()` throw `ImmutableLogException`. Bulk query-builder deletes and updates, upserts and truncate (including `action-logger:prune`) bypass model events and are not blocked.
 - Morph id columns (`subject_id`, `actor_id`) remain bigint.
 
 ## Custom Events
