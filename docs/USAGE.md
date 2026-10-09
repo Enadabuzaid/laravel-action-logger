@@ -118,6 +118,22 @@ ActionLogger::for($post)
     ->save();
 ```
 
+## Audit Metadata (1.1)
+
+```php
+ActionLogger::log($subject, $actor, 'roles.assigned', null, ['role' => 'admin'], null,
+    module: 'roles', severity: 'warning');            // severity: info (default) | warning | critical
+
+ActionLogger::for($subject)->event('users.suspended')->module('users')->severity('critical')->save();
+
+ActionLogger::log(null, null, 'permissions.synced', module: 'permissions'); // subject-less event
+```
+
+- `request_id` is taken from the `X-Request-ID` header, otherwise a uuid generated once per request (null outside a request). Pass `requestId:` to override.
+- Scopes: `ActionLog::forModule('roles')`, `::severity('warning')`, `::forRequest($id)`.
+- Immutability: set `ACTION_LOGGER_IMMUTABLE=true` to make model `update()`/`delete()` throw `ImmutableLogException`. Bulk query-builder deletes (including `action-logger:prune`) bypass model events and still work.
+- Morph id columns (`subject_id`, `actor_id`) remain bigint.
+
 ## Custom Events
 
 You can log any custom event name:

@@ -38,11 +38,26 @@ abstract class TestCase extends Orchestra
     {
         // Setup default database to use sqlite :memory:
         $app['config']->set('database.default', 'testbench');
-        $app['config']->set('database.connections.testbench', [
-            'driver' => 'sqlite',
-            'database' => ':memory:',
-            'prefix' => '',
-        ]);
+        if (env('DB_CONNECTION') === 'pgsql') {
+            $app['config']->set('database.connections.testbench', [
+                'driver' => 'pgsql',
+                'host' => env('DB_HOST', '127.0.0.1'),
+                'port' => env('DB_PORT', '5432'),
+                'database' => env('DB_DATABASE', 'logger_testing'),
+                'username' => env('DB_USERNAME', 'postgres'),
+                'password' => env('DB_PASSWORD', ''),
+                'charset' => 'utf8',
+                'prefix' => '',
+                'search_path' => 'public',
+                'sslmode' => 'prefer',
+            ]);
+        } else {
+            $app['config']->set('database.connections.testbench', [
+                'driver' => 'sqlite',
+                'database' => ':memory:',
+                'prefix' => '',
+            ]);
+        }
 
         // Configure action logger defaults
         $app['config']->set('action-logger.enabled', true);

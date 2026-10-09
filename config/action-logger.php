@@ -6,6 +6,18 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Immutable Logs
+    |--------------------------------------------------------------------------
+    |
+    | When true, updating or deleting an ActionLog model instance throws an
+    | ImmutableLogException. Bulk query-builder deletes (such as the
+    | action-logger:prune command) bypass model events and still work.
+    |
+    */
+    'immutable' => env('ACTION_LOGGER_IMMUTABLE', false),
+
+    /*
+    |--------------------------------------------------------------------------
     | Action Logger Enabled
     |--------------------------------------------------------------------------
     |

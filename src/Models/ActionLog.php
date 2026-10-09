@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Enadstack\ActionLogger\Models;
 
 use Carbon\Carbon;
+use Enadstack\ActionLogger\Exceptions\ImmutableLogException;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
@@ -13,8 +14,8 @@ use Illuminate\Database\Eloquent\Relations\MorphTo;
  * ActionLog Model
  *
  * @property int $id
- * @property string $subject_type
- * @property int $subject_id
+ * @property string|null $subject_type
+ * @property int|null $subject_id
  * @property string|null $actor_type
  * @property int|null $actor_id
  * @property string $event
@@ -24,11 +25,17 @@ use Illuminate\Database\Eloquent\Relations\MorphTo;
  * @property string|null $ip_address
  * @property string|null $user_agent
  * @property int|null $tenant_id
+ * @property string|null $module
+ * @property string $severity
+ * @property string|null $request_id
  * @property Carbon $created_at
  * @property Carbon $updated_at
  * @property-read Model|null $subject
  * @property-read Model|null $actor
  *
+ * @method static Builder forModule(string $module)
+ * @method static Builder severity(string $severity)
+ * @method static Builder forRequest(string $requestId)
  * @method static Builder forSubject(Model $subject)
  * @method static Builder forActor(Model $actor)
  * @method static Builder forEvent(string $event)
@@ -46,6 +53,28 @@ use Illuminate\Database\Eloquent\Relations\MorphTo;
  */
 class ActionLog extends Model
 {
+    public const SEVERITY_INFO = 'info';
+
+    public const SEVERITY_WARNING = 'warning';
+
+    public const SEVERITY_CRITICAL = 'critical';
+
+    /**
+     * Block instance updates and deletes when immutability is enabled.
+     * Bulk query-builder deletes (e.g. action-logger:prune) bypass model events.
+     */
+    protected static function booted(): void
+    {
+        $block = static function (): void {
+            if (config('action-logger.immutable', false)) {
+                throw new ImmutableLogException('Action log entries are immutable.');
+            }
+        };
+
+        static::updating($block);
+        static::deleting($block);
+    }
+
     /**
      * The table associated with the model.
      *
@@ -70,6 +99,9 @@ class ActionLog extends Model
         'ip_address',
         'user_agent',
         'tenant_id',
+        'module',
+        'severity',
+        'request_id',
     ];
 
     /**
@@ -99,6 +131,21 @@ class ActionLog extends Model
     public function actor(): MorphTo
     {
         return $this->morphTo('actor');
+    }
+
+    public function scopeForModule(Builder $query, string $module): Builder
+    {
+        return $query->where('module', $module);
+    }
+
+    public function scopeSeverity(Builder $query, string $severity): Builder
+    {
+        return $query->where('severity', $severity);
+    }
+
+    public function scopeForRequest(Builder $query, string $requestId): Builder
+    {
+        return $query->where('request_id', $requestId);
     }
 
     /**
@@ -163,8 +210,12 @@ class ActionLog extends Model
      */
     public function getDescription(): string
     {
-        $subjectName = class_basename($this->subject_type);
+        $subjectName = $this->subject_type ? class_basename($this->subject_type) : null;
         $actorName = $this->actor_type ? class_basename($this->actor_type) : 'System';
+
+        if ($subjectName === null) {
+            return sprintf('%s %s n/a', $actorName, $this->event);
+        }
 
         return sprintf(
             '%s %s %s #%s',
@@ -437,7 +488,7 @@ class ActionLog extends Model
             'event_label' => $this->getEventLabel(),
             'description' => $this->getDescription(),
             'subject' => [
-                'type' => class_basename($this->subject_type),
+                'type' => $this->subject_type ? class_basename($this->subject_type) : null,
                 'id' => $this->subject_id,
             ],
             'actor' => $this->actor ? [

@@ -57,6 +57,9 @@
         }
     },
     "extra": {
+        "branch-alias": {
+            "dev-main": "1.x-dev"
+        },
         "laravel": {
             "providers": [
                 "Enadstack\\ActionLogger\\ActionLoggerServiceProvider"

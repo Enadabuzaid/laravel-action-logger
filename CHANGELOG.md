@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2026-10-10
+
+### Added
+- Audit columns `module`, `severity` (info|warning|critical) and `request_id` on `action_logs`, with composite indexes on `(module, created_at)` and `(actor_type, actor_id, created_at)`. Publish and run the new migration.
+- Nullable subject: `ActionLogger::log(null, ...)` records subject-less events (the tenant resolver is skipped).
+- Request id from the `X-Request-ID` header or a per-request generated uuid.
+- Fluent `module()`, `severity()`, `requestId()` and model scopes `forModule()`, `severity()`, `forRequest()`.
+- Opt-in immutability via `action-logger.immutable` (`ACTION_LOGGER_IMMUTABLE`): model update/delete throw `ImmutableLogException`.
+
+### Changed
+- No breaking changes; new `log()` parameters are trailing and optional.
+
+### Notes
+- Bulk query-builder deletes (e.g. `action-logger:prune`) bypass model events and are not blocked by immutability.
+- Morph id columns remain bigint.
+
 ## [1.0.2] - 2026-07-15
 
 ### Changed
