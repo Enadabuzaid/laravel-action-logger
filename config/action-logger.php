@@ -18,6 +18,27 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Redacted keys
+    |--------------------------------------------------------------------------
+    |
+    | Values of these keys (case-insensitive, at any depth) in old_values,
+    | new_values and meta are replaced with "[redacted]" BEFORE they are stored.
+    |
+    */
+    'redact' => [
+        'password',
+        'password_confirmation',
+        'remember_token',
+        'token',
+        'token_hash',
+        'two_factor_secret',
+        'two_factor_recovery_codes',
+        'secret',
+        'api_key',
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Action Logger Enabled
     |--------------------------------------------------------------------------
     |

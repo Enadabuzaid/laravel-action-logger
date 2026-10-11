@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2026-10-11
+
+### Added
+- `subject_label` / `actor_label` snapshot columns (nullable, 190 chars) filled from `name`/`email`/`title` or the new trailing `subjectLabel` / `actorLabel` arguments of `ActionLogger::log()`.
+- Secret redaction before storage (`action-logger.redact`, `Support\Redactor`, container singleton).
+- Composite index on `(subject_type, subject_id, created_at)`. Publish and run the new migration.
+
+### Changed
+- No breaking changes; new `log()` parameters are trailing and optional.
+
 ## [1.1.0] - 2026-10-10
 
 ### Added

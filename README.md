@@ -323,6 +323,9 @@ ActionLogger::log(null, null, 'permissions.synced', module: 'permissions'); // s
 - Scopes: `ActionLog::forModule('roles')`, `::severity('warning')`, `::forRequest($id)`.
 - Immutability: set `ACTION_LOGGER_IMMUTABLE=true` to make model `update()`/`delete()` throw `ImmutableLogException`. Bulk query-builder deletes and updates, upserts and truncate (including `action-logger:prune`) bypass model events and are not blocked.
 - Morph id columns (`subject_id`, `actor_id`) remain bigint.
+- Snapshot labels: `subject_label` / `actor_label` (190 chars, multibyte-safe) are stored with each entry so a deleted subject or actor still renders. They are derived from `name`, then `email`, then `title`, or passed explicitly: `ActionLogger::log($m, $u, 'x.y', subjectLabel: 'Invoice 7', actorLabel: 'Cron')`. Rows written before 1.2.0 have null labels.
+- Redaction: values of keys listed in `action-logger.redact` (case-insensitive, any depth) are replaced with `[redacted]` in `old_values`, `new_values` and `meta` BEFORE they are stored, so secrets never reach the table.
+- Retention under immutability: model `update()`/`delete()` throw, while `action-logger:prune` (bulk delete) remains the documented retention path.
 
 ## 🔨 Maintenance
 

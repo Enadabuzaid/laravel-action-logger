@@ -76,6 +76,13 @@ class ActionLoggerServiceProvider extends ServiceProvider
             },
         );
 
+        $this->app->singleton(
+            \Enadstack\ActionLogger\Support\Redactor::class,
+            static fn (): \Enadstack\ActionLogger\Support\Redactor => new \Enadstack\ActionLogger\Support\Redactor(
+                (array) config('action-logger.redact', []),
+            ),
+        );
+
         // Bind the ActionLogger service
         $this->app->singleton(
             \Enadstack\ActionLogger\Services\ActionLogger::class,

@@ -6,6 +6,7 @@ namespace Enadstack\ActionLogger\Services;
 
 use Enadstack\ActionLogger\Contracts\TenantResolverInterface;
 use Enadstack\ActionLogger\Models\ActionLog;
+use Enadstack\ActionLogger\Support\Redactor;
 use Illuminate\Support\Facades\Request;
 use Illuminate\Support\Str;
 
@@ -53,6 +54,7 @@ class ActionLogger
      */
     public function __construct(
         protected TenantResolverInterface $tenantResolver,
+        protected ?Redactor $redactor = null,
     ) {}
 
     /**
@@ -67,6 +69,8 @@ class ActionLogger
      * @param string|null $module Module/area the event belongs to
      * @param string $severity One of info, warning, critical
      * @param string|null $requestId Explicit request id (defaults to the current request's id)
+     * @param string|null $subjectLabel Snapshot label of the subject (derived from name/email/title when null)
+     * @param string|null $actorLabel Snapshot label of the actor (derived from name/email/title when null)
      * @return ActionLog|null The created log, or null if logging is disabled
      */
     public function log(
@@ -79,6 +83,8 @@ class ActionLogger
         ?string $module = null,
         string $severity = ActionLog::SEVERITY_INFO,
         ?string $requestId = null,
+        ?string $subjectLabel = null,
+        ?string $actorLabel = null,
     ): ?ActionLog {
         if (!in_array($severity, [ActionLog::SEVERITY_INFO, ActionLog::SEVERITY_WARNING, ActionLog::SEVERITY_CRITICAL], true)) {
             throw new \InvalidArgumentException("Invalid severity [{$severity}]. Expected info, warning or critical.");
@@ -103,9 +109,11 @@ class ActionLogger
             'actor_type' => $actor ? $this->getMorphClass($actor) : null,
             'actor_id' => $actor ? $this->getModelKey($actor) : null,
             'event' => $event,
-            'old_values' => $oldValues,
-            'new_values' => $newValues,
-            'meta' => $meta,
+            'subject_label' => $subjectLabel !== null ? $this->truncateLabel($subjectLabel) : $this->deriveLabel($subject),
+            'actor_label' => $actorLabel !== null ? $this->truncateLabel($actorLabel) : $this->deriveLabel($actor),
+            'old_values' => $this->redactor()->redact($oldValues),
+            'new_values' => $this->redactor()->redact($newValues),
+            'meta' => $this->redactor()->redact($meta),
             'ip_address' => $ipAddress,
             'user_agent' => $userAgent,
             'tenant_id' => $tenantId,
@@ -296,6 +304,36 @@ class ActionLogger
         $this->requestId = null;
 
         return $this;
+    }
+
+    protected function redactor(): Redactor
+    {
+        return $this->redactor ?? new Redactor((array) config('action-logger.redact', []));
+    }
+
+    /**
+     * Derive a human label from name, email or title (first non-empty).
+     */
+    protected function deriveLabel(?object $model): ?string
+    {
+        if ($model === null || !method_exists($model, 'getAttribute')) {
+            return null;
+        }
+
+        foreach (['name', 'email', 'title'] as $attribute) {
+            $value = $model->getAttribute($attribute);
+
+            if (is_string($value) && $value !== '') {
+                return $this->truncateLabel($value);
+            }
+        }
+
+        return null;
+    }
+
+    protected function truncateLabel(string $label): string
+    {
+        return mb_substr($label, 0, 190);
     }
 
     /**

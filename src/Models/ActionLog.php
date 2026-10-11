@@ -28,6 +28,8 @@ use Illuminate\Database\Eloquent\Relations\MorphTo;
  * @property string|null $module
  * @property string $severity
  * @property string|null $request_id
+ * @property string|null $subject_label
+ * @property string|null $actor_label
  * @property Carbon $created_at
  * @property Carbon $updated_at
  * @property-read Model|null $subject
@@ -102,6 +104,8 @@ class ActionLog extends Model
         'module',
         'severity',
         'request_id',
+        'subject_label',
+        'actor_label',
     ];
 
     /**
