@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- `ActionLogger::resolveTenantUsing(callable)` and `Tenant\CallableTenantResolver`: closure resolver for `resolver` mode, returning `null` for platform actors. Register it from a service provider (closures in config break `config:cache`).
+- `action-logger.tenant.platform_ability` (nullable Gate ability) lets tenant-less viewers see all rows in the UI.
+- `Support\TenantLogQuery`, the scoped base query used by the UI. Laravel Boost guideline `resources/boost/guidelines/core.blade.php`.
+
+### Fixed
+- UI leak: `ActionLogController` queries were not tenant-scoped. All reads now use `forTenant()`; in `column`/`resolver` mode viewers without a tenant get 403 unless `platform_ability` passes. `mode = none` is unchanged.
+- `subject()` page loaded another tenant's record before any tenant check; it now returns 404 when the viewer's scope has no log for it.
+- Subject-less logs now go through the resolver. In `column` mode they fall back to the actor's tenant column (previously `null`).
+- `resolver` mode with an invalid `tenant.resolver` now throws instead of silently using `NullTenantResolver`; with no resolver registered it throws on first log. `mode = none` is unchanged.
+- Non-base64 subject types in the subject URL no longer raise a `TypeError`.
+
+### Notes
+- `action-logger:prune --tenant=<id>` takes an explicit id and never uses the resolver; without it all tenants, including `null` rows, are pruned.
+- The package has no exports; only UI views are tenant-scoped. PHPStan is not installed in this package's dev dependencies.
+
 ## [1.2.0] - 2026-10-11
 
 ### Added

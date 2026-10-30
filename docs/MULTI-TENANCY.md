@@ -379,3 +379,33 @@ If you get errors about the tenant column:
 - [Configuration Reference](./CONFIGURATION.md)
 - [API Reference](./API.md)
 - [Commands](./COMMANDS.md)
+
+## Context-object tenancy (resolver mode)
+
+For apps that keep the current tenant in a context object (for example Tafadel's `TenantContext::id()`), register the resolver from a service provider:
+
+```php
+// config/action-logger.php
+'tenant' => ['mode' => 'resolver', 'resolver' => null, 'platform_ability' => 'view-platform-logs'],
+
+// AppServiceProvider::boot()
+use Enadstack\ActionLogger\Facades\ActionLogger;
+
+ActionLogger::resolveTenantUsing(fn (?object $subject, ?object $actor) => TenantContext::id());
+```
+
+- Return `null` for platform actors (admins without a tenant). Their rows have `tenant_id = null`.
+- Closures in `config/action-logger.php` break `config:cache`; use this method or a class implementing `TenantResolverInterface` (`'resolver' => App\Support\TenantResolver::class`). The old factory form (`fn ($app) => new Resolver`) still works.
+- In `resolver` mode a missing or invalid resolver throws; it never falls back to "no tenant".
+- Subject-less logs (`ActionLogger::log(null, ...)`) also use the resolver.
+- Queued jobs must restore the tenant context before logging, or their logs are written as platform rows.
+
+### Reading logs
+
+- `ActionLog::forTenant($id)` returns that tenant's rows. `forTenant(null)` returns platform rows: never pass an unchecked context id to it.
+- The package UI scopes every query. Tenant viewers see only their tenant (never `null` rows). A viewer with no tenant gets 403 unless the Gate ability named in `action-logger.tenant.platform_ability` passes; then they see all rows. `mode = none` is not filtered.
+- The package has no exports, so only UI views are scoped.
+
+### Pruning
+
+`php artisan action-logger:prune --days=90 --tenant=<id>` prunes one tenant. The id is explicit and the resolver is not used. Without `--tenant` all tenants, including `null` rows, are pruned.

@@ -20,6 +20,8 @@ use Illuminate\Support\Facades\Facade;
  * @method static ActionLoggerService withMeta(array $meta)
  * @method static ActionLoggerService addMeta(string $key, mixed $value)
  * @method static ActionLog|null save()
+ * @method static ActionLoggerService resolveTenantUsing(callable $callback)
+ * @method static int|string|null resolveTenantId(?object $subject, ?object $actor)
  * @method static ActionLoggerService reset()
  * @method static ActionLoggerService make()
  *

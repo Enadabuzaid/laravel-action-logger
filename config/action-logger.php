@@ -76,6 +76,10 @@ return [
     |       return new \App\Services\CustomTenantResolver();
     |   },
     |
+    | Or leave 'resolver' null and register a closure from a service provider
+    | (config closures break config:cache):
+    |   ActionLogger::resolveTenantUsing(fn ($subject, $actor) => TenantContext::id());
+    |
     */
 
     'tenant' => [
@@ -92,6 +96,12 @@ return [
          | - \Enadstack\ActionLogger\Tenant\RequestTenantResolver (read from request)
          */
         'resolver' => null,
+
+        /*
+         | Optional gate ability that lets viewers with NO tenant (platform admins)
+         | open the UI and see all rows in column/resolver mode. Null = they get 403.
+         */
+        'platform_ability' => null,
     ],
 
     /*
