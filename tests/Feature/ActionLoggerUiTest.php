@@ -7,25 +7,15 @@ namespace Enadstack\ActionLogger\Tests\Feature;
 use Enadstack\ActionLogger\Tests\Support\Models\TestModel;
 use Enadstack\ActionLogger\Tests\Support\Models\User;
 use Enadstack\ActionLogger\Tests\TestCase;
+use Inertia\Testing\AssertableInertia as Assert;
 use PHPUnit\Framework\Attributes\Group;
 
-/**
- * UI Tests require Inertia package to be installed.
- * These tests are skipped by default. Run with: vendor/bin/phpunit --group=integration
- */
 #[Group('integration')]
 class ActionLoggerUiTest extends TestCase
 {
-    /**
-     * Setup the test environment.
-     */
-    protected function setUp(): void
+    protected function getPackageProviders($app): array
     {
-        if (!class_exists(\Inertia\Inertia::class)) {
-            $this->markTestSkipped('Inertia is not installed. Skipping UI tests.');
-        }
-
-        parent::setUp();
+        return array_merge(parent::getPackageProviders($app), [\Inertia\ServiceProvider::class]);
     }
 
     /**
@@ -46,6 +36,12 @@ class ActionLoggerUiTest extends TestCase
         $app['config']->set('action-logger.ui.route_prefix', 'action-logs');
         $app['config']->set('action-logger.ui.middleware', ['web']);
         $app['config']->set('action-logger.ui.authorize', null);
+        $app['config']->set('inertia.testing.ensure_pages_exist', false);
+
+        $root = sys_get_temp_dir().'/action-logger-views';
+        @mkdir($root);
+        file_put_contents($root.'/app.blade.php', '<html><body>@inertia</body></html>');
+        $app['config']->set('view.paths', [$root]);
     }
 
     /** @test */
@@ -86,7 +82,7 @@ class ActionLoggerUiTest extends TestCase
             fn (Assert $page) => $page
                 ->component('ActionLogger/AllLogs')
                 ->has('logs.data', 20) // Default per_page is 20
-                ->has('logs.meta')
+                ->has('logs.current_page')
                 ->has('filters')
                 ->has('modules')
                 ->has('events'),
@@ -165,7 +161,7 @@ class ActionLoggerUiTest extends TestCase
         $response->assertInertia(
             fn (Assert $page) => $page
                 ->component('ActionLogger/SubjectLogs')
-                ->where('subject.id', $model->id)
+                ->where('subject.id', (string) $model->id)
                 ->where('subject.class', TestModel::class)
                 ->has('logs.data', 3), // created + 2 updates
         );
@@ -253,7 +249,7 @@ class ActionLoggerUiTest extends TestCase
         $response->assertInertia(
             fn (Assert $page) => $page
                 ->has('logs.data', 5) // Only 5 per page
-                ->has('logs.meta'),
+                ->has('logs.current_page'),
         );
     }
 

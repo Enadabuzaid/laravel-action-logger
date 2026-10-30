@@ -210,7 +210,8 @@ class ActionLogController extends Controller
 
         // Try to load the subject instance
         abort_if(
-            !$this->logs()->where('subject_type', $subjectClass)->where('subject_id', $subjectId)->exists(),
+            config('action-logger.tenant.mode', 'none') !== 'none'
+                && !$this->logs()->where('subject_type', $subjectClass)->where('subject_id', $subjectId)->exists(),
             404,
             'Subject not found',
         );

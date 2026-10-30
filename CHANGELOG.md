@@ -14,10 +14,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - UI leak: `ActionLogController` queries were not tenant-scoped. All reads now use `forTenant()`; in `column`/`resolver` mode viewers without a tenant get 403 unless `platform_ability` passes. `mode = none` is unchanged.
-- `subject()` page loaded another tenant's record before any tenant check; it now returns 404 when the viewer's scope has no log for it.
+- `subject()` page loaded another tenant's record before any tenant check; it now returns 404 when the viewer's scope has no log for it (tenant modes only; `mode = none` still returns 200).
 - Subject-less logs now go through the resolver. In `column` mode they fall back to the actor's tenant column (previously `null`).
 - `resolver` mode with an invalid `tenant.resolver` now throws instead of silently using `NullTenantResolver`; with no resolver registered it throws on first log. `mode = none` is unchanged.
 - Non-base64 subject types in the subject URL no longer raise a `TypeError`.
+
+### Tests
+- UI tests now run (Inertia added to `require-dev`) and are no longer skipped; fixed 3 stale assertions that the skip was hiding. New `ActionLoggerTenantUiTest` covers tenant A vs B/`null` on all 4 routes, 403/`platform_ability`, and `mode = none`.
 
 ### Notes
 - `action-logger:prune --tenant=<id>` takes an explicit id and never uses the resolver; without it all tenants, including `null` rows, are pruned.

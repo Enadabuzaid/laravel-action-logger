@@ -36,9 +36,10 @@
         "illuminate/http": "^11.0|^12.0|^13.0"
     },
     "require-dev": {
+        "inertiajs/inertia-laravel": "^3",
+        "laravel/pint": "^1.0",
         "orchestra/testbench": "^9.0|^10.0|^11.0",
-        "phpunit/phpunit": "^11.0",
-        "laravel/pint": "^1.0"
+        "phpunit/phpunit": "^11.0"
     },
     "suggest": {
         "inertiajs/inertia-laravel": "Required only if you enable the bundled action-logger UI (config('action-logger.ui.enabled'))."
