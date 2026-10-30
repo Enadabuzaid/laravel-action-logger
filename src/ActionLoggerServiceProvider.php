@@ -101,19 +101,32 @@ class ActionLoggerServiceProvider extends ServiceProvider
     {
         $resolver = config('action-logger.tenant.resolver');
 
+        if ($resolver === null) {
+            // Expect ActionLogger::resolveTenantUsing(); throws on use when none is registered.
+            return new \Enadstack\ActionLogger\Tenant\CallableTenantResolver;
+        }
+
+        if ($resolver instanceof \Enadstack\ActionLogger\Contracts\TenantResolverInterface) {
+            return $resolver;
+        }
+
         if (is_string($resolver) && class_exists($resolver)) {
-            return $this->app->make($resolver);
-        }
-
-        if (is_callable($resolver)) {
+            $instance = $this->app->make($resolver);
+        } elseif (is_callable($resolver)) {
+            // Factory form (backward compatible): fn ($app) => new SomeResolver
             $instance = $resolver($this->app);
-            if ($instance instanceof \Enadstack\ActionLogger\Contracts\TenantResolverInterface) {
-                return $instance;
-            }
+        } else {
+            $instance = null;
         }
 
-        // Fallback to null resolver if custom resolver is invalid
-        return new \Enadstack\ActionLogger\Tenant\NullTenantResolver;
+        if (!$instance instanceof \Enadstack\ActionLogger\Contracts\TenantResolverInterface) {
+            throw new \InvalidArgumentException(
+                'action-logger.tenant.resolver must be a TenantResolverInterface class or a factory returning one. '
+                .'To resolve a tenant id from a closure use ActionLogger::resolveTenantUsing().',
+            );
+        }
+
+        return $instance;
     }
 
     /**

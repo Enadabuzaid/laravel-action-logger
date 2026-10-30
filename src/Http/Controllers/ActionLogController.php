@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Enadstack\ActionLogger\Http\Controllers;
 
 use Enadstack\ActionLogger\Models\ActionLog;
+use Enadstack\ActionLogger\Support\TenantLogQuery;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Gate;
@@ -30,14 +31,14 @@ class ActionLogController extends Controller
 
         // Calculate stats
         $stats = [
-            'total_logs' => ActionLog::count(),
-            'logs_last_24h' => ActionLog::where('created_at', '>=', now()->subDay())->count(),
-            'logs_last_7_days' => ActionLog::where('created_at', '>=', now()->subDays(7))->count(),
-            'logs_last_30_days' => ActionLog::where('created_at', '>=', now()->subDays(30))->count(),
+            'total_logs' => $this->logs()->count(),
+            'logs_last_24h' => $this->logs()->where('created_at', '>=', now()->subDay())->count(),
+            'logs_last_7_days' => $this->logs()->where('created_at', '>=', now()->subDays(7))->count(),
+            'logs_last_30_days' => $this->logs()->where('created_at', '>=', now()->subDays(30))->count(),
         ];
 
         // Event counts
-        $eventCounts = ActionLog::selectRaw('event, COUNT(*) as count')
+        $eventCounts = $this->logs()->selectRaw('event, COUNT(*) as count')
             ->groupBy('event')
             ->pluck('count', 'event')
             ->toArray();
@@ -45,7 +46,7 @@ class ActionLogController extends Controller
         $stats['counts_per_event'] = $eventCounts;
 
         // Top modules (by subject_type)
-        $topModules = ActionLog::selectRaw('subject_type, COUNT(*) as count')
+        $topModules = $this->logs()->selectRaw('subject_type, COUNT(*) as count')
             ->groupBy('subject_type')
             ->orderByDesc('count')
             ->limit(5)
@@ -64,7 +65,7 @@ class ActionLogController extends Controller
         $stats['top_modules'] = $topModules;
 
         // Top actors
-        $topActors = ActionLog::whereNotNull('actor_type')
+        $topActors = $this->logs()->whereNotNull('actor_type')
             ->whereNotNull('actor_id')
             ->selectRaw('actor_type, actor_id, COUNT(*) as count')
             ->groupBy('actor_type', 'actor_id')
@@ -82,7 +83,7 @@ class ActionLogController extends Controller
         $stats['top_actors'] = $topActors;
 
         // Recent logs
-        $recentLogs = ActionLog::with(['subject', 'actor'])
+        $recentLogs = $this->logs()->with(['subject', 'actor'])
             ->latest()
             ->limit(10)
             ->get()
@@ -102,7 +103,7 @@ class ActionLogController extends Controller
     {
         $filters = $request->only(['event', 'module_key', 'subject_type', 'actor_id', 'from', 'to', 'search']);
 
-        $query = ActionLog::with(['subject', 'actor'])->latest();
+        $query = $this->logs()->with(['subject', 'actor'])->latest();
 
         // Apply filters
         if (!empty($filters['event'])) {
@@ -157,7 +158,7 @@ class ActionLogController extends Controller
 
         $filters = request()->only(['event', 'from', 'to']);
 
-        $query = ActionLog::with(['subject', 'actor'])
+        $query = $this->logs()->with(['subject', 'actor'])
             ->where('subject_type', $module['subject_type'])
             ->latest();
 
@@ -179,11 +180,11 @@ class ActionLogController extends Controller
 
         // Module stats
         $moduleStats = [
-            'total' => ActionLog::where('subject_type', $module['subject_type'])->count(),
-            'last_24h' => ActionLog::where('subject_type', $module['subject_type'])
+            'total' => $this->logs()->where('subject_type', $module['subject_type'])->count(),
+            'last_24h' => $this->logs()->where('subject_type', $module['subject_type'])
                 ->where('created_at', '>=', now()->subDay())
                 ->count(),
-            'last_7_days' => ActionLog::where('subject_type', $module['subject_type'])
+            'last_7_days' => $this->logs()->where('subject_type', $module['subject_type'])
                 ->where('created_at', '>=', now()->subDays(7))
                 ->count(),
         ];
@@ -208,6 +209,13 @@ class ActionLogController extends Controller
         abort_if(!$subjectClass || !class_exists($subjectClass), 404, 'Subject type not found');
 
         // Try to load the subject instance
+        abort_if(
+            config('action-logger.tenant.mode', 'none') !== 'none'
+                && !$this->logs()->where('subject_type', $subjectClass)->where('subject_id', $subjectId)->exists(),
+            404,
+            'Subject not found',
+        );
+
         $subject = null;
         try {
             $subject = $subjectClass::find($subjectId);
@@ -216,7 +224,7 @@ class ActionLogController extends Controller
         }
 
         // Get logs for this subject
-        $logs = ActionLog::with('actor')
+        $logs = $this->logs()->with('actor')
             ->where('subject_type', $subjectClass)
             ->where('subject_id', $subjectId)
             ->latest()
@@ -239,6 +247,16 @@ class ActionLogController extends Controller
     }
 
     /**
+     * Tenant-scoped base query; every log read in this controller goes through it.
+     *
+     * @return \Illuminate\Database\Eloquent\Builder<ActionLog>
+     */
+    protected function logs(): \Illuminate\Database\Eloquent\Builder
+    {
+        return app(TenantLogQuery::class)->for(auth()->user());
+    }
+
+    /**
      * Get modules from configuration.
      */
     protected function getModules(): array
@@ -251,7 +269,7 @@ class ActionLogController extends Controller
      */
     protected function getAvailableEvents(): array
     {
-        return ActionLog::distinct('event')
+        return $this->logs()->distinct('event')
             ->pluck('event')
             ->sort()
             ->values()
@@ -349,8 +367,8 @@ class ActionLogController extends Controller
         }
 
         // Check if it's base64 encoded
-        if (base64_encode(base64_decode($subjectType, true)) === $subjectType) {
-            $decoded = base64_decode($subjectType);
+        $decoded = base64_decode($subjectType, true);
+        if ($decoded !== false && base64_encode($decoded) === $subjectType) {
             if (class_exists($decoded)) {
                 return $decoded;
             }
@@ -358,7 +376,7 @@ class ActionLogController extends Controller
 
         // Check if it's a valid class name from allowed list
         $allowedTypes = collect($modules)->pluck('subject_type')->toArray();
-        $allowedTypes = array_merge($allowedTypes, ActionLog::distinct('subject_type')->pluck('subject_type')->toArray());
+        $allowedTypes = array_merge($allowedTypes, $this->logs()->distinct('subject_type')->pluck('subject_type')->toArray());
 
         if (in_array($subjectType, $allowedTypes)) {
             return $subjectType;

@@ -215,6 +215,15 @@ Use your own logic to determine tenant context:
 
 See [Multi-Tenancy Guide](docs/MULTI-TENANCY.md) for complete documentation.
 
+### Context-object tenancy
+
+```php
+// AppServiceProvider::boot(), with action-logger.tenant.mode = 'resolver'
+ActionLogger::resolveTenantUsing(fn ($subject, $actor) => TenantContext::id()); // null for platform admins
+```
+
+See [docs/MULTI-TENANCY.md](docs/MULTI-TENANCY.md) for scoping, `platform_ability` and `action-logger:prune --tenant=<id>`.
+
 ## 🎨 Optional UI
 
 The package includes a beautiful Inertia + Vue 3 + shadcn-vue UI for viewing logs.

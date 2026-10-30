@@ -7,6 +7,7 @@ namespace Enadstack\ActionLogger\Services;
 use Enadstack\ActionLogger\Contracts\TenantResolverInterface;
 use Enadstack\ActionLogger\Models\ActionLog;
 use Enadstack\ActionLogger\Support\Redactor;
+use Enadstack\ActionLogger\Tenant\CallableTenantResolver;
 use Illuminate\Support\Facades\Request;
 use Illuminate\Support\Str;
 
@@ -49,6 +50,8 @@ class ActionLogger
 
     protected ?string $requestId = null;
 
+    protected ?CallableTenantResolver $customResolver = null;
+
     /**
      * Create a new ActionLogger instance.
      */
@@ -56,6 +59,31 @@ class ActionLogger
         protected TenantResolverInterface $tenantResolver,
         protected ?Redactor $redactor = null,
     ) {}
+
+    /**
+     * Register a callable that resolves the current tenant id (resolver mode).
+     * Call it from a service provider; return null for platform actors.
+     *
+     * @param callable(?object, ?object): (int|string|null) $callback
+     */
+    public function resolveTenantUsing(callable $callback): self
+    {
+        $this->customResolver = new CallableTenantResolver(\Closure::fromCallable($callback));
+
+        return $this;
+    }
+
+    /**
+     * Resolve the tenant id for a subject/actor pair (subject may be null).
+     */
+    public function resolveTenantId(?object $subject, ?object $actor): int|string|null
+    {
+        if ($this->customResolver !== null && config('action-logger.tenant.mode') === 'resolver') {
+            return $this->customResolver->resolveTenantId($subject, $actor);
+        }
+
+        return $this->tenantResolver->resolveTenantId($subject, $actor);
+    }
 
     /**
      * Log an action directly.
@@ -96,7 +124,7 @@ class ActionLogger
         }
 
         // Resolve tenant ID
-        $tenantId = $subject !== null ? $this->tenantResolver->resolveTenantId($subject, $actor) : null;
+        $tenantId = $this->resolveTenantId($subject, $actor);
 
         // Get request context
         $ipAddress = $this->getIpAddress();
